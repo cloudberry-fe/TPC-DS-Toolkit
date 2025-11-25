@@ -1,0 +1,1 @@
+INSERT INTO :DB_SCHEMA_NAME.call_center SELECT * FROM :DB_EXT_SCHEMA_NAME.call_center;
