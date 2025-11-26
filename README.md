@@ -1,21 +1,24 @@
-# Decision Support Benchmark for Cloudberry Database
+# TPC-DS Toolkit for Cloudberry Database
 
 [![TPC-DS](https://img.shields.io/badge/TPC--DS-v4.0.0-blue)](http://www.tpc.org/tpcds/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)](LICENSE)
 
-A comprehensive tool for running TPC-DS benchmarks on Cloudberry / HashData / Greenplum / PostgreSQL. Originally derived from [Pivotal TPC-DS](https://github.com/pivotal/TPC-DS).
+A comprehensive and automated tool for running TPC-DS benchmarks on Cloudberry Database, HashData, Greenplum, and PostgreSQL. Originally derived from [Pivotal TPC-DS](https://github.com/pivotal/TPC-DS).
 
 ## Overview
 
-This tool provides:
-- Automated TPC-DS benchmark execution
-- Support for both local and cloud deployments
-- Configurable data generation (1GB to 100TB)
-- Customizable query execution parameters
-- Detailed performance reporting
+This toolkit provides:
+- End-to-end automated TPC-DS benchmark execution
+- Support for both local and cloud deployment models
+- Configurable data generation (1GB to 100TB scale factors)
+- Flexible query execution with customizable parameters
+- Detailed performance reporting and scoring
+- Support for multiple database products and versions
+- Optimized for MPP architectures
+- Easy-to-use configuration system
 
 ## Table of Contents
-- [Decision Support Benchmark for Cloudberry Database](#decision-support-benchmark-for-cloudberry-database)
+- [TPC-DS Toolkit for Cloudberry Database](#tpc-ds-toolkit-for-cloudberry-database)
   - [Overview](#overview)
   - [Table of Contents](#table-of-contents)
   - [Quick Start](#quick-start)
@@ -26,7 +29,7 @@ This tool provides:
     - [Tested Products](#tested-products)
     - [Local Cluster Setup](#local-cluster-setup)
     - [Remote Client Setup](#remote-client-setup)
-    - [Introduction to TPC-DS-Toolkit Process.](#introduction-to-tpc-ds-toolkit-process)
+    - [TPC-DS Toolkit Process](#tpc-ds-toolkit-process)
     - [TPC-DS Tools Dependencies](#tpc-ds-tools-dependencies)
   - [Installation](#installation)
   - [Usage](#usage)
@@ -51,6 +54,8 @@ This tool provides:
 
 ## Quick Start
 
+### Basic Usage
+
 ```bash
 # 1. Clone the repository
 git clone https://github.com/cloudberry-contrib/TPC-DS-Toolkit.git
@@ -63,17 +68,48 @@ vim tpcds_variables.sh
 ./run.sh
 ```
 
-### Guides to run test on MPP Architecture with "local" mode
+### Detailed Guides
 
-Fit for products: Cloudberry / Greenplum / SynxDB 4.x / HashData Lightning.
+#### Local Mode (for MPP Architecture)
 
-Please refer to the [QuickStartLocal.md](tpcds_tools/QuickStartLocal.md) for more details.
+**Best for**: Cloudberry Database, Greenplum, HashData Lightning
 
-### Guides to run test on Postgresql compatible database with "Cloud" mode
+This mode leverages the MPP architecture by generating data directly on segment nodes and loading it using the `gpfdist` protocol, maximizing resource utilization for faster benchmark execution.
 
-Fit for products: Any products that is compatible with Postgresql using `psql` clients. Including Hashdata Enterprise, SynxDB Elastic.
+**Key Configuration**:
+```bash
+export RUN_MODEL="local"
+export TABLE_ACCESS_METHOD="USING ao_column"
+export TABLE_USE_PARTITION="true"
+```
 
-Please refer to the [QuickStartCloud.md](tpcds_tools/QuickStartCloud.md) for more details.
+**Requirements**:
+- Running Cloudberry Database or Greenplum cluster
+- `gpadmin` access to the coordinator node
+- Password-less SSH between coordinator and segment nodes
+
+Please refer to the [QuickStartLocal.md](tpcds_tools/QuickStartLocal.md) for detailed instructions.
+
+#### Cloud Mode (for PostgreSQL Compatible Databases)
+
+**Best for**: HashData Cloud, Cloudberry Database, Greenplum, PostgreSQL
+
+This mode generates data on the client machine and imports it into the database using the `COPY` command, making it suitable for cloud deployments and remote clients.
+
+**Key Configuration**:
+```bash
+export RUN_MODEL="cloud"
+export PSQL_OPTIONS="-h <host> -p <port> -U <user>"
+export RANDOM_DISTRIBUTION="true"
+export TABLE_USE_PARTITION="true"
+```
+
+**Requirements**:
+- `psql` client installed on the client machine
+- Passwordless database access (via `.pgpass` file)
+- Sufficient disk space for data generation
+
+Please refer to the [QuickStartCloud.md](tpcds_tools/QuickStartCloud.md) for detailed instructions.
 
 
 ## Supported TPC-DS Versions
@@ -92,10 +128,10 @@ This tool uses TPC-DS 4.0.0 as of the latest version.
 This tool is built with shell scripts and has been tested primarily on CentOS-based operating systems. To accommodate different products, various options are available to choose storage types, partitions, optimizer settings, and distribution policies. Please review the `tpcds_variables.sh` for detailed configuration options for different models and products.
 
 ### Tested Products
-- Cloudberry 1.x / Cloudberry 2.X
+- Cloudberry Database 1.x / 2.x
 - HashData Enterprise / HashData Lightning
-- Greenplum 4.x / Greenplum 5.x / Greenplum 6.x / Greenplum 7.x
-- PostgreSQL 17.X
+- Greenplum Database 4.x / 5.x / 6.x / 7.x
+- PostgreSQL 15.x / 16.x / 17.x
 
 ### Local Cluster Setup
 For running tests on the coordinator host:
@@ -127,31 +163,60 @@ With this mode, all data will be generated on the client machine, and data will 
    ```
 > The following conventions are used in this document: mdw for the coordinator node, and sdw1..n for segment nodes.
 
-### Introduction to TPC-DS-Toolkit Process.
+### TPC-DS Toolkit Process
 
-TPC-DS Tool Execution Process:
-1. Compile TPC-DS tools
-   - Build the benchmark toolkit from source code
-2. Generate test data
-   - Create datasets using dsdgen based on specified scale factor
-3. Initialize cluster
-   - Provision and configure the database cluster environment
-4. Initialize database objects
-   - Create schemas, tables, and indexes required for TPC-DS
-5. Load data
-   - Import generated datasets into the database.
-6. Analyze tables
-   - Compute table statistics for optimal query performance
-7. Single user test (Power test)
-   - Execute all 99 queries sequentially to measure single-threaded performance
-8. Single user reports
-   - Generate the result for single user test.
-9. Multi users test (Throughput test)
-   - Execute multiple queries concurrently to measure system throughput capacity.
-10. Multi user reports
-    - Generate the result for multi users test.
-11. Final score
-    - Generate performance metric combining power and throughput tests.
+The TPC-DS benchmark execution follows these sequential steps:
+
+1. **Compile TPC-DS Tools** (`00_compile_tpcds`)
+   - Builds the `dsdgen` (data generation) and `dsqgen` (query generation) tools from source
+   - Only needs to be run once unless the toolkit is updated
+
+2. **Generate Test Data** (`01_gen_data`)
+   - Creates datasets using `dsdgen` based on the specified scale factor
+   - Supports parallel data generation for faster execution
+   - Data is generated either locally on segment nodes or on a remote client depending on the run model
+
+3. **Initialize Cluster** (`02_init`)
+   - Configures database settings and GUCs for optimal benchmark performance
+   - Records segment configurations for data generation and loading
+
+4. **Create Database Objects** (`03_ddl`)
+   - Creates schemas, tables, and indexes according to TPC-DS specifications
+   - Supports different storage types, partitioning, and distribution policies
+   - Can drop and recreate existing objects if needed
+
+5. **Load Data** (`04_load`)
+   - Imports generated datasets into the database
+   - Uses `gpfdist` protocol for local mode or `COPY` command for cloud mode
+   - Supports parallel loading for faster data ingestion
+
+6. **Analyze Tables** (`05_analyze`)
+   - Computes table statistics for optimal query planning
+   - Improves query performance by providing accurate cardinality estimates
+
+7. **Generate Queries** (`06_sql`)
+   - Creates the 99 TPC-DS benchmark queries using `dsqgen`
+   - Supports custom query generation seeds for reproducible results
+
+8. **Single User Test (Power Test)**
+   - Executes all 99 queries sequentially to measure single-threaded performance
+   - Measures the time to complete all queries (power metric)
+
+9. **Single User Reports** (`07_single_user_reports`)
+   - Generates detailed reports for the single user test results
+   - Stores results in the database for further analysis
+
+10. **Multi User Test (Throughput Test)** (`08_multi_user`)
+    - Executes multiple query streams concurrently to measure system throughput
+    - Simulates real-world workloads with multiple users accessing the system
+
+11. **Multi User Reports** (`09_multi_user_reports`)
+    - Generates detailed reports for the multi user test results
+    - Analyzes query performance under concurrent workloads
+
+12. **Final Score Calculation** (`10_score`)
+    - Computes the final QphDS (Queries per Hour TPC-DS) score
+    - Combines power and throughput metrics according to TPC-DS specifications
 
 
 ### TPC-DS Tools Dependencies
@@ -194,164 +259,167 @@ By default, this will run a scale 1 (1GB) benchmark with 1 concurrent user, from
 
 ## Configuration
 
-The benchmark is controlled through the `tpcds_variables.sh` file. Here are the key configuration sections:
+The benchmark is controlled through the `tpcds_variables.sh` file, which is organized into the following modules:
 
 ### Environment Options
+
+These options define the core environment settings for the benchmark:
+
 ```bash
 # Core settings
-export ADMIN_USER="gpadmin"
-export BENCH_ROLE="dsbench" 
-export DB_SCHEMA_NAME="tpcds"  # Database schema to use for all TPC-DS data tables  
-export RUN_MODEL="cloud"    # "local" or "cloud"
+export ADMIN_USER="gpadmin"        # OS user that executes this toolkit
+export BENCH_ROLE="dsbench"         # Database user for running the benchmark
+export DB_SCHEMA_NAME="tpcds"       # Database schema for TPC-DS tables
+export RUN_MODEL="local"            # "local" or "cloud" run mode
 
 # Remote cluster connection
-export PSQL_OPTIONS="-h <host> -p <port>"
-export CUSTOM_GEN_PATH="/tmp/dsbenchmark"  # Location for data generation, separated by space for multiple paths.
-export GEN_DATA_PARALLEL="2"             # Number of parallel data generation processes for each path.
-
+export PSQL_OPTIONS=""              # Database connection options (host, port, user)
 ```
 
 ### Benchmark Options
-```bash
-# Scale and concurrency 
-export GEN_DATA_SCALE="1"    # 1 = 1GB, 1000 = 1TB, 3000 = 3TB
-export MULTI_USER_COUNT="2"  # Number of concurrent users during throughput tests
 
-# For large scale tests, consider:
-# - 3TB: GEN_DATA_SCALE="3000" with MULTI_USER_COUNT="5"
-# - 10TB: GEN_DATA_SCALE="10000" with MULTI_USER_COUNT="7"
-# - 30TB: GEN_DATA_SCALE="30000" with MULTI_USER_COUNT="10"
+These options control the scale and concurrency of the benchmark:
+
+```bash
+export GEN_DATA_SCALE="1"           # Scale factor (1 = 1GB, 1000 = 1TB)
+export MULTI_USER_COUNT="2"         # Number of concurrent users for throughput tests
+
 ```
 
-### Storage Options  
+### Step Options
+
+These options control the execution of each benchmark step:
+
 ```bash
-# Table format and compression options
-export TABLE_ACCESS_METHOD="USING ao_column"  # Available options:
-                                       # - heap: Classic row storage
-                                       # - ao_row: Append-optimized row storage
-                                       # - ao_column: Append-optimized columnar storage
-                                       # - pax: PAX storage format (Cloudberry 2.0/HashData Lightning only)
+## Step 00_compile_tpcds: Compile TPC-DS tools
+export RUN_COMPILE_TPCDS="true"  # Compile data/query generators (one-time setup)
 
-export TABLE_STORAGE_OPTIONS="WITH (compresstype=zstd, compresslevel=5)"  # Compression settings:
-                                                                           # - zstd: Best compression ratio
-                                                                           # - compresslevel: 1-19 (higher=better compression)
-
-# Table partitioning for 7 large tables:
-# catalog_returns, catalog_sales, inventory, store_returns, store_sales, web_returns, web_sales
-export TABLE_USE_PARTITION="true"
-```
-
-**Note**: 
-- `TABLE_ACCESS_METHOD`: Default to non-value to be compatible with HashData Cloud and early Greenplum versions. Should be set to `USING ao_column` for Cloudberry or Greenplum. `USING PAX` is available for Cloudberry 2.0 and HashData Lightning.
-- For earlier Greenplum products without `TABLE_ACCESS_METHOD` support, use full options: `appendoptimized=true, orientation=column, compresstype=zlib, compresslevel=5, blocksize=1048576` 
-- Distribution policies are defined in `TPC-DS-Toolkit/03_ddl/distribution.txt`. With products supporting `REPLICATED` policy, 14 tables use `REPLICATED` distribution by default. For early Greenplum products without `REPLICATED` policy support, see `TPC-DS-Toolkit/03_ddl/distribution_original.txt`.
-- Table partition definitions are in `TPC-DS-Toolkit/03_ddl/*.sql.partition`. When using table partitioning along with column-oriented tables, if the block size is set to a large value, it might cause high memory consumption and result in out-of-memory errors. In that case, reduce the block size or the number of partitions.
-
-### Step Control Options
-```bash
-# Benchmark execution steps
-# 1. Setup and compilation
-export RUN_COMPILE_TPCDS="true"  # Compile data/query generators (one-time)
-export RUN_INIT="true"           # Initialize cluster settings
-
-# 2. Data generation and loading
+## Step 01_gen_data: Generate test data
 export RUN_GEN_DATA="true"       # Generate test data
 export GEN_NEW_DATA="true"       # Generate new data vs reusing existing data
+### Default path to store the generated benchmark data, separated by space for multiple paths.
+export CUSTOM_GEN_PATH="/tmp/dsbenchmark"
+### How many parallel processes to run on each data path to generate data in all modes
+export GEN_DATA_PARALLEL="2"
+### The following variables only take effect when RUN_MODEL is set to "local".
+export USING_CUSTOM_GEN_PATH_IN_LOCAL_MODE="false"  # Use custom data generation path in local mode
+
+## Step 02_init: Initialize cluster
+export RUN_INIT="true"           # Initialize cluster settings and GUCs
+
+## Step 03_ddl: Create database objects
 export RUN_DDL="true"            # Create database schemas/tables
 export DROP_EXISTING_TABLES="true" # Drop existing tables before creating new ones
+
+## Step 04_load: Load generated data
 export RUN_LOAD="true"           # Load generated data
 export LOAD_PARALLEL="2"         # Number of parallel processes to load data (max 24)
 export TRUNCATE_TABLES="true"    # Truncate existing tables before loading data
 
-# 3. Statistics and optimization
+## Step 05_analyze: Compute table statistics
 export RUN_ANALYZE="true"        # Compute table statistics for query optimization
 export RUN_ANALYZE_PARALLEL="5"  # Number of parallel processes for analyze (max 24)
 
-# 4. Query execution
+## Step 06_sql: Generate and run queries
 export RUN_SQL="true"                 # Run power test queries
 export RUN_QGEN="true"                # Generate queries for TPC-DS benchmark
 export UNIFY_QGEN_SEED="true"         # Use unified seed for query generation
 export QUERY_INTERVAL="0"             # Wait time between each query execution
 export ON_ERROR_STOP="0"              # Stop on error flag (1 to stop)
-export RUN_SINGLE_USER_REPORTS="true" # Upload single-user test results
+
+## Step 07_single_user_reports: Generate single user reports
+export RUN_SINGLE_USER_REPORTS="true" # Generate single-user test results
+
+## Step 08_multi_user: Run multi-user test
 export RUN_MULTI_USER="false"         # Run throughput test queries
 export RUN_MULTI_USER_QGEN="true"     # Generate queries for multi-user test
-export RUN_MULTI_USER_REPORTS="false" # Upload multi-user test results
+
+## Step 09_multi_user_reports: Generate multi-user reports
+export RUN_MULTI_USER_REPORTS="false" # Generate multi-user test results
+
+## Step 10_score: Calculate final score
 export RUN_SCORE="false"              # Compute final benchmark score
 ```
 
-There are multiple steps in running the benchmark, controlled by these variables:
+### Misc Options
 
-| Variable                  | Default | Description |
-|---------------------------|---------|-------------|
-| `RUN_COMPILE_TPCDS`       | `true`  | Compiles `dsdgen` and `dsqgen`. Usually only needs to be done once. |
-| `RUN_GEN_DATA`            | `true`  | Generates flat files for the benchmark in parallel on all segment nodes. Files are stored under the `${PGDATA}/dsbenchmark` directory. |
-| `GEN_NEW_DATA`            | `true`  | Controls whether to generate new data or reuse existing data. Only effective when `RUN_GEN_DATA` is true. |
-| `RUN_INIT`                | `true`  | Sets up GUCs for the database and records segment configurations. Required after cluster reconfiguration. |
-| `RUN_DDL`                 | `true`  | Recreates schemas and tables (including external tables for loading). Set to `false` to keep existing data. |
-| `DROP_EXISTING_TABLES`    | `true`  | Controls whether to drop existing tables before creating new ones. Only effective when `RUN_DDL` is true. |
-| `RUN_LOAD`                | `true`  | Loads data from flat files into tables. |
-| `LOAD_PARALLEL`           | `2`     | Number of parallel processes to load data (maximum 24). |
-| `TRUNCATE_TABLES`         | `true`  | Truncate existing tables before loading data. |
-| `RUN_ANALYZE`             | `true`  | Computes table statistics for optimal query performance. |
-| `RUN_ANALYZE_PARALLEL`    | `5`     | Number of parallel processes for analyze (maximum 24). |
-| `RUN_SQL`                 | `true`  | Runs the power test of the benchmark. |
-| `RUN_QGEN`                | `true`  | Generate queries for the TPC-DS benchmark. |
-| `UNIFY_QGEN_SEED`         | `true`  | Use unified seed for query generation. |
-| `QUERY_INTERVAL`          | `0`     | Wait time between each query execution. Set to 1 if you want to stop when an error occurs. |
-| `ON_ERROR_STOP`           | `0`     | Stop on error flag (1 to stop). |
-| `RUN_SINGLE_USER_REPORTS` | `true`  | Generate results to the database under the schema `tpcds_reports`. Required for the `RUN_SCORE` step. |
-| `RUN_MULTI_USER`          | `false` | Runs the throughput test of the benchmark. This generates multiple query streams using `dsqgen`, which samples the database to find proper filters. For very large databases with many streams, this process can take hours just to generate the queries. |
-| `RUN_MULTI_USER_QGEN`     | `true`  | Generate queries for multi-user test. |
-| `RUN_MULTI_USER_REPORTS`  | `false` | Generate multi-user results to the database. |
-| `RUN_SCORE`               | `false` | Computes the final `QphDS` score based on the benchmark standard. |
-
-**WARNING**: TPC-DS does not rely on the log folder to determine which steps to run or skip. It will only run the steps that are explicitly set to `true` in the `tpcds_variables.sh` file. If any necessary step is set to `false` but has never been executed before, the script will abort when it tries to access data that doesn't exist.
-
-### Miscellaneous Options
+These options control various miscellaneous settings:
 
 ```bash
-# Misc options
+export LOG_DEBUG="false"                # Enable debug logging
 export SINGLE_USER_ITERATIONS="1"      # Number of times to run the power test
 export EXPLAIN_ANALYZE="false"         # Set to true for query plan analysis
 export RANDOM_DISTRIBUTION="false"     # Use random distribution for fact tables
 export ENABLE_VECTORIZATION="off"      # Set to on/off to enable vectorization
-export STATEMENT_MEM="2GB"             # Memory per statement for single-user test
+export STATEMENT_MEM="1GB"             # Memory per statement for single-user test
 export STATEMENT_MEM_MULTI_USER="1GB"  # Memory per statement for multi-user test
 export GPFDIST_LOCATION="p"            # Where gpfdist will run: p (primary) or m (mirror)
 export OSVERSION=$(uname)
 export ADMIN_USER=$(whoami)
 export ADMIN_HOME=$(eval echo ${HOME}/${ADMIN_USER})
 export MASTER_HOST=$(hostname -s)
+export DB_SCHEMA_NAME="$(echo "${DB_SCHEMA_NAME}" | tr '[:upper:]' '[:lower:]')"
+export DB_EXT_SCHEMA_NAME="ext_${DB_SCHEMA_NAME}"
+export GEN_PATH_NAME="dsgendata_${DB_SCHEMA_NAME}"
+export BENCH_ROLE="$(echo "${BENCH_ROLE}" | tr '[:upper:]' '[:lower:]')"
+export DB_CURRENT_USER=$(psql ${PSQL_OPTIONS} -t -c "SELECT current_user;" 2>/dev/null | tr -d '[:space:]')
 ```
 
 Key options explained:
 
+- `LOG_DEBUG`: When set to `true`, enables detailed debug logging for troubleshooting.
 - `EXPLAIN_ANALYZE`: When set to `true`, executes queries with `EXPLAIN ANALYZE` to see query plans, costs, and memory usage. For debugging only, as it affects benchmark results.
-- `RANDOM_DISTRIBUTION`: When set to `true`, fact tables are distributed randomly rather than using pre-defined distribution columns. Recommended for Cloud products.
-- `SINGLE_USER_ITERATION`: Controls how many times the power test runs. The fastest query time from multiple runs is used for final scoring.
-- `STATEMENT_MEM`: Sets memory per statement for single-user tests (should be less than `gp_vmem_protect_limit`).
-- `STATEMENT_MEM_MULTI_USER`: Sets memory per statement for multi-user tests (note: `STATEMENT_MEM_MULTI_USER` × `MULTI_USER_COUNT` should be less than `gp_vmem_protect_limit`).
-- `ENABLE_VECTORIZATION`: Set to `on` to enable vectorized computing for better performance (supported in Lightning 1.5.3+). Only works with AO column and PAX table formats.
+- `RANDOM_DISTRIBUTION`: When set to `true`, fact tables are distributed randomly rather than using pre-defined distribution columns. Recommended for cloud products.
+- `SINGLE_USER_ITERATIONS`: Controls how many times the power test runs. The fastest query time from multiple runs is used for final scoring.
+- `STATEMENT_MEM`: Sets memory per statement for single-user tests. Should be less than `gp_vmem_protect_limit`.
+- `STATEMENT_MEM_MULTI_USER`: Sets memory per statement for multi-user tests. Note: `STATEMENT_MEM_MULTI_USER` × `MULTI_USER_COUNT` should be less than `gp_vmem_protect_limit`.
+- `ENABLE_VECTORIZATION`: Set to `on` to enable vectorized computing for better performance (supported in Cloudberry Database 2.0+ and HashData Lightning 1.5.3+). Only works with AO column and PAX table formats.
+- `GPFDIST_LOCATION`: Specifies where `gpfdist` will run: `p` for primary segment nodes or `m` for mirror segment nodes.
+
+### Storage Options
+
+These options control the storage settings for tables:
+
+```bash
+## Support TABLE_ACCESS_METHOD as ao_row / ao_column / heap in both GPDB 7 / CBDB
+## Support TABLE_ACCESS_METHOD as "PAX" for PAX table format for CBDB 2.0 only.
+export TABLE_ACCESS_METHOD="USING ao_column"  # Uncomment to enable
+
+## Set to use partition for the following tables:
+## catalog_returns / catalog_sales / inventory / store_returns / store_sales / web_returns / web_sales
+export TABLE_USE_PARTITION="true"
+
+## SET TABLE_STORAGE_OPTIONS with different options in GP/CBDB/Cloud
+export TABLE_STORAGE_OPTIONS="WITH (appendoptimized=true, orientation=column, compresstype=zstd, compresslevel=5)"
+```
+
+**Note**: 
+- `TABLE_ACCESS_METHOD`: Default is commented out for compatibility with all products. For Cloudberry Database and Greenplum 7.0+, set to `USING ao_column` for best performance. `USING PAX` is available exclusively for Cloudberry Database 2.0.
+- For earlier Greenplum versions without `TABLE_ACCESS_METHOD` support, use full storage options in `TABLE_STORAGE_OPTIONS`:
+  ```bash
+  export TABLE_STORAGE_OPTIONS="appendoptimized=true, orientation=column, compresstype=zlib, compresslevel=5, blocksize=1048576"
+  ```
+- Distribution policies are defined in `TPC-DS-Toolkit/03_ddl/distribution.txt`. For products supporting `REPLICATED` distribution, 14 dimension tables use `REPLICATED` distribution by default. For early Greenplum versions without `REPLICATED` support, see `TPC-DS-Toolkit/03_ddl/distribution_original.txt`.
+- Table partition definitions are in `TPC-DS-Toolkit/03_ddl/*.sql.partition`. When using partitioning with column-oriented tables, large block sizes may cause high memory consumption. Reduce block size or partition count if encountering out-of-memory errors.
 
 ## Performance Tuning
 
-For optimal performance:
+For optimal performance, consider the following tuning recommendations:
 
 1. **Memory Settings**
    ```bash
    # Recommended for 8GB+ RAM per segment node cluster
    export STATEMENT_MEM="8GB"
-   # Should be set to STATEMENT_MEM / MULTI_USER_COUNT
+   # Should be set to STATEMENT_MEM / MULTI_USER_COUNT for balanced performance
    export STATEMENT_MEM_MULTI_USER="4GB"
    ```
 
 2. **Storage Optimization**
    ```bash
-   # For best compression ratio
+   # For best compression and query performance
    export TABLE_ACCESS_METHOD="USING ao_column"
-   export TABLE_STORAGE_OPTIONS="WITH (compresstype=zstd, compresslevel=9)"
-   # Use partitioned tables for better query performance
+   export TABLE_STORAGE_OPTIONS="WITH (appendoptimized=true, orientation=column, compresstype=zstd, compresslevel=9)"
+   # Use partitioned tables for better query performance on large datasets
    export TABLE_USE_PARTITION="true"
    ```
 
@@ -359,7 +427,11 @@ For optimal performance:
    ```bash
    # Adjust based on available CPU cores
    export GEN_DATA_PARALLEL="$(nproc)"
+   # Set based on available system resources and expected workload
    export MULTI_USER_COUNT="$(( $(nproc) / 2 ))"
+   # Increase parallel loading for faster data ingestion
+   export LOAD_PARALLEL="4"
+   export RUN_ANALYZE_PARALLEL="8"
    ```
 
 4. **Enable Vectorization** (for supported systems)
@@ -367,12 +439,29 @@ For optimal performance:
    export ENABLE_VECTORIZATION="on"
    ```
 
-5. **Optimizer Settings** (for supported systems)
+5. **Distribution Policy**
+   ```bash
+   # Use random distribution for cloud products or when unsure about data distribution
+   export RANDOM_DISTRIBUTION="true"
+   ```
 
+6. **Optimizer Settings**
    ```bash
    # Adjust optimizer settings in 01_gen_data/optimizer.txt
-   # Turn ORCA on/off for each queries by setting in this file
-   # After changing the settings, make sure to run the QGEN to generate the queries with the new settings.
+   # Configure ORCA vs Planner usage for each query
+   # After changing settings, regenerate queries with RUN_QGEN="true"
+   ```
+
+7. **Query Generation**
+   ```bash
+   # Use unified seed for reproducible results
+   export UNIFY_QGEN_SEED="true"
+   ```
+
+8. **Power Test Iterations**
+   ```bash
+   # Run power test multiple times and use the fastest result
+   export SINGLE_USER_ITERATIONS="3"
    ```
 
 ## Benchmark Modifications

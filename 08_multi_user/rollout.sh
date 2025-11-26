@@ -41,7 +41,7 @@ if [ "${MULTI_USER_COUNT}" -eq "0" ]; then
 fi
 
 function get_running_jobs_count() {
-  job_count=$(ps -fu "${ADMIN_USER}" |grep -v grep |grep "08_multi_user/test.sh"|wc -l || true)
+  job_count=$(ps -fu "${ADMIN_USER}" |grep -v grep |grep -i "${TPC_DS_DIR}/08_multi_user/test.sh"|wc -l || true)
   echo "${job_count}"
 }
 
@@ -123,12 +123,15 @@ done
 log_time "Now executing ${MULTI_USER_COUNT} multi-user queries. This may take a while."
 seconds=0
 echo -n "Multi-user query duration: "
-running_jobs_count=$(get_running_jobs_count)
+running_jobs_count=${MULTI_USER_COUNT}
 while [ ${running_jobs_count} -gt 0 ]; do
   printf "\rMulti-user query duration: ${seconds} second(s)"
+  start_time=$(date +%s)
   sleep 15
   running_jobs_count=$(get_running_jobs_count)
-  seconds=$((seconds + 15))
+  end_time=$(date +%s)
+  command_duration=$((end_time - start_time))
+  seconds=$((seconds + command_duration))
 done
 echo ""
 log_time "Multi-user queries completed."
