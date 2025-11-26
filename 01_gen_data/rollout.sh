@@ -254,9 +254,12 @@ if [ "${GEN_NEW_DATA}" == "true" ]; then
     echo -ne "Generating data duration: "
     while [ "$count" -gt "0" ]; do
       printf "\rGenerating data duration: ${seconds} second(s)"
+      start_time=$(date +%s)
       sleep 5
-      seconds=$((seconds + 5))
       count=$(ps -ef |grep -v grep |grep "generate_dsdata.sh"|grep -i "${GEN_PATH_NAME}"|wc -l || true)
+      end_time=$(date +%s)
+      command_duration=$((end_time - start_time))
+      seconds=$((seconds + command_duration))
     done
   else
     kill_orphaned_data_gen
@@ -268,9 +271,12 @@ if [ "${GEN_NEW_DATA}" == "true" ]; then
     echo -ne "Generating data duration: "
     while [ "$count" -gt "0" ]; do
       printf "\rGenerating data duration: ${seconds} second(s)"
+      start_time=$(date +%s)
       sleep 5
-      seconds=$((seconds + 5))
       count=$(get_count_generate_data)
+      end_time=$(date +%s)
+      command_duration=$((end_time - start_time))
+      seconds=$((seconds + command_duration))
     done
   fi
   echo ""
