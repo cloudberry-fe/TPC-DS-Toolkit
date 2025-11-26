@@ -123,7 +123,7 @@ done
 log_time "Now executing ${MULTI_USER_COUNT} multi-user queries. This may take a while."
 seconds=0
 echo -n "Multi-user query duration: "
-running_jobs_count=$(get_running_jobs_count)
+running_jobs_count=${MULTI_USER_COUNT}
 while [ ${running_jobs_count} -gt 0 ]; do
   printf "\rMulti-user query duration: ${seconds} second(s)"
   sleep 15
