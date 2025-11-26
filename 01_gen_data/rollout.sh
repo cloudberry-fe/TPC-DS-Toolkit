@@ -32,7 +32,7 @@ function get_count_generate_data() {
   while read -r i; do
     # Set reasonable connection timeout to avoid infinite waiting
     # Use -n option instead of -f to ensure command completes
-    next_count=$(ssh -o ConnectTimeout=10 -o LogLevel=quiet -n ${i} "bash -c 'ps -ef | grep generate_data.sh | grep -i \"${GEN_PATH_NAME}\" | grep -v grep | wc -l'" 2>/dev/null)
+    next_count=$(ssh -o ConnectTimeout=10 -o LogLevel=quiet -n ${i} "bash -c 'ps -ef | grep generate_dsdata.sh | grep -i \"${GEN_PATH_NAME}\" | grep -v grep | wc -l'" 2>/dev/null)
     
     # Check if it's a valid number, default to 0 if not
     check="^[0-9]+$"
@@ -63,13 +63,13 @@ function kill_orphaned_data_gen() {
 function copy_generate_data() {
   if [ "${LOG_DEBUG}" == "true" ]; then
     log_time "RUN_MODEL is LOCAL, proceeding with copying binaries"
-    log_time "copy tpcds binaries and generate_data.sh to segment hosts"
+    log_time "copy tpcds binaries and generate_dsdata.sh to segment hosts"
   fi
   # Temporarily disable error exit to capture SSH failures
   set +e  
   local ssh_failed=0
   for i in $(cat ${TPC_DS_DIR}/segment_hosts.txt); do
-    scp ${TPC_DS_DIR}/01_gen_data/generate_data.sh ${TPC_DS_DIR}/00_compile_tpcds/tools/dsdgen ${TPC_DS_DIR}/00_compile_tpcds/tools/tpcds.idx ${i}: &
+    scp ${TPC_DS_DIR}/01_gen_data/generate_dsdata.sh ${TPC_DS_DIR}/00_compile_tpcds/tools/dsdgen ${TPC_DS_DIR}/00_compile_tpcds/tools/tpcds.idx ${i}: &
     if [ $? -ne 0 ]; then
      log_time "Error: Failed to copy data generation binaries to host ${i}"
      ssh_failed=1
@@ -132,9 +132,9 @@ function gen_data() {
       for ((j=1; j<=GEN_DATA_PARALLEL; j++)); do
         GEN_DATA_PATH="${SEG_DATA_PATH}/${GEN_PATH_NAME}/${CHILD}"
         if [ "${LOG_DEBUG}" == "true" ]; then
-          log_time "ssh -n ${EXT_HOST} \"bash -c 'cd ~/; ./generate_data.sh ${GEN_DATA_SCALE} ${CHILD} ${PARALLEL} ${GEN_DATA_PATH} ${RNGSEED} > ${SEG_DATA_PATH}/${GEN_PATH_NAME}/logs/tpcds.generate_data.${CHILD}.log 2>&1 &'\""
+          log_time "ssh -n ${EXT_HOST} \"bash -c 'cd ~/; ./generate_dsdata.sh ${GEN_DATA_SCALE} ${CHILD} ${PARALLEL} ${GEN_DATA_PATH} ${RNGSEED} > ${SEG_DATA_PATH}/${GEN_PATH_NAME}/logs/tpcds.generate_data.${CHILD}.log 2>&1 &'\""
         fi
-        ssh -n ${EXT_HOST} "bash -c 'cd ~/; ./generate_data.sh ${GEN_DATA_SCALE} ${CHILD} ${PARALLEL} ${GEN_DATA_PATH} ${RNGSEED} > ${SEG_DATA_PATH}/${GEN_PATH_NAME}/logs/tpcds.generate_data.${CHILD}.log 2>&1 &'" &
+        ssh -n ${EXT_HOST} "bash -c 'cd ~/; ./generate_dsdata.sh ${GEN_DATA_SCALE} ${CHILD} ${PARALLEL} ${GEN_DATA_PATH} ${RNGSEED} > ${SEG_DATA_PATH}/${GEN_PATH_NAME}/logs/tpcds.generate_data.${CHILD}.log 2>&1 &'" &
         CHILD=$((CHILD + 1))
       done
     done
@@ -184,9 +184,9 @@ function gen_data() {
         for ((j=1; j<=GEN_DATA_PARALLEL; j++)); do
           GEN_DATA_SUBPATH="${GEN_DATA_PATH}/${GEN_PATH_NAME}/${CHILD}"
           if [ "${LOG_DEBUG}" == "true" ]; then
-            log_time "ssh -n ${EXT_HOST} \"bash -c 'cd ~/; ./generate_data.sh ${GEN_DATA_SCALE} ${CHILD} ${PARALLEL} ${GEN_DATA_SUBPATH} ${RNGSEED} > ${GEN_DATA_PATH}/${GEN_PATH_NAME}/logs/tpcds.generate.data.${CHILD}.log 2>&1 &'\""
+            log_time "ssh -n ${EXT_HOST} \"bash -c 'cd ~/; ./generate_dsdata.sh ${GEN_DATA_SCALE} ${CHILD} ${PARALLEL} ${GEN_DATA_SUBPATH} ${RNGSEED} > ${GEN_DATA_PATH}/${GEN_PATH_NAME}/logs/tpcds.generate.data.${CHILD}.log 2>&1 &'\""
           fi
-          ssh -n ${EXT_HOST} "bash -c 'cd ~/; ./generate_data.sh ${GEN_DATA_SCALE} ${CHILD} ${PARALLEL} ${GEN_DATA_SUBPATH} ${RNGSEED} > ${GEN_DATA_PATH}/${GEN_PATH_NAME}/logs/tpcds.generate.data.${CHILD}.log 2>&1 &'" &
+          ssh -n ${EXT_HOST} "bash -c 'cd ~/; ./generate_dsdata.sh ${GEN_DATA_SCALE} ${CHILD} ${PARALLEL} ${GEN_DATA_SUBPATH} ${RNGSEED} > ${GEN_DATA_PATH}/${GEN_PATH_NAME}/logs/tpcds.generate.data.${CHILD}.log 2>&1 &'" &
           CHILD=$((CHILD + 1))
         done
       done
@@ -242,21 +242,21 @@ if [ "${GEN_NEW_DATA}" == "true" ]; then
       for ((j=1; j<=GEN_DATA_PARALLEL; j++)); do
         GEN_DATA_SUBPATH="${GEN_DATA_PATH}/${GEN_PATH_NAME}/${CHILD}"
         if [ "${LOG_DEBUG}" == "true" ]; then
-          log_time "sh ${TPC_DS_DIR}/01_gen_data/generate_data.sh ${GEN_DATA_SCALE} ${CHILD} ${PARALLEL} ${GEN_DATA_SUBPATH} ${RNGSEED} > ${GEN_DATA_PATH}/${GEN_PATH_NAME}/logs/tpcds.generate.data.${CHILD}.log 2>&1 &"
+          log_time "sh ${TPC_DS_DIR}/01_gen_data/generate_dsdata.sh ${GEN_DATA_SCALE} ${CHILD} ${PARALLEL} ${GEN_DATA_SUBPATH} ${RNGSEED} > ${GEN_DATA_PATH}/${GEN_PATH_NAME}/logs/tpcds.generate.data.${CHILD}.log 2>&1 &"
         fi
-        sh ${TPC_DS_DIR}/01_gen_data/generate_data.sh ${GEN_DATA_SCALE} ${CHILD} ${PARALLEL} ${GEN_DATA_SUBPATH} ${RNGSEED} > ${GEN_DATA_PATH}/${GEN_PATH_NAME}/logs/tpcds.generate.data.${CHILD}.log 2>&1 &
+        sh ${TPC_DS_DIR}/01_gen_data/generate_dsdata.sh ${GEN_DATA_SCALE} ${CHILD} ${PARALLEL} ${GEN_DATA_SUBPATH} ${RNGSEED} > ${GEN_DATA_PATH}/${GEN_PATH_NAME}/logs/tpcds.generate.data.${CHILD}.log 2>&1 &
         CHILD=$((CHILD + 1))
       done
     done
     log_time "Now generating data...This may take a while."
-    count=$(ps -ef |grep -v grep |grep "generate_data.sh"|grep -i "${GEN_PATH_NAME}"|wc -l || true)
+    count=$(ps -ef |grep -v grep |grep "generate_dsdata.sh"|grep -i "${GEN_PATH_NAME}"|wc -l || true)
     seconds=0
     echo -ne "Generating data duration: "
     while [ "$count" -gt "0" ]; do
       printf "\rGenerating data duration: ${seconds} second(s)"
       sleep 5
       seconds=$((seconds + 5))
-      count=$(ps -ef |grep -v grep |grep "generate_data.sh"|grep -i "${GEN_PATH_NAME}"|wc -l || true)
+      count=$(ps -ef |grep -v grep |grep "generate_dsdata.sh"|grep -i "${GEN_PATH_NAME}"|wc -l || true)
     done
   else
     kill_orphaned_data_gen
