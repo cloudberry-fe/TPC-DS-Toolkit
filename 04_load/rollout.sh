@@ -27,7 +27,7 @@ function stop_gpfdist() {
     log_time "stop gpfdist on all ports"
   fi
   for i in $(cat ${TPC_DS_DIR}/segment_hosts.txt); do
-    ssh -n $i "bash -c 'cd ~/; ./stop_gpfdist.sh'" &
+    ssh -n $i "bash -c 'cd ~/; ./stop_gpfdist.sh ${GEN_PATH_NAME}'" &
   done
   wait
 }
@@ -307,7 +307,7 @@ if [ "${RUN_MODEL}" == "remote" ]; then
   if [ "${LOG_DEBUG}" == "true" ]; then
     log_time "Clean up gpfdist on client"
   fi
-  sh ${PWD}/stop_gpfdist.sh
+  sh ${PWD}/stop_gpfdist.sh ${GEN_PATH_NAME}
 elif [ "${RUN_MODEL}" == "local" ]; then
   if [ "${LOG_DEBUG}" == "true" ]; then
     log_time "Clean up gpfdist on all segments"
