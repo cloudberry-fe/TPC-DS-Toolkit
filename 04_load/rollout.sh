@@ -49,7 +49,7 @@ function start_gpfdist() {
     for EXT_HOST in $(cat ${TPC_DS_DIR}/segment_hosts.txt); do
       # For each path, start a gpfdist instance
       for GEN_DATA_PATH in "${GEN_PATHS[@]}"; do
-        GEN_DATA_PATH="${GEN_DATA_PATH}/${DB_SCHEMA_NAME}"
+        GEN_DATA_PATH="${GEN_DATA_PATH}/dsbenchmark"
         PORT=$((GPFDIST_PORT + flag))
         let flag=$flag+1
         if [ "${LOG_DEBUG}" == "true" ]; then
@@ -71,7 +71,7 @@ function start_gpfdist() {
       CHILD=$(echo ${i} | awk -F '|' '{print $1}')
       EXT_HOST=$(echo ${i} | awk -F '|' '{print $2}')
       GEN_DATA_PATH=$(echo ${i} | awk -F '|' '{print $3}'| sed 's#//#/#g')
-      GEN_DATA_PATH="${GEN_DATA_PATH}/${DB_SCHEMA_NAME}"
+      GEN_DATA_PATH="${GEN_DATA_PATH}/dsbenchmark"
       PORT=$((GPFDIST_PORT + flag))
       let flag=$flag+1
       if [ "${LOG_DEBUG}" == "true" ]; then
@@ -137,7 +137,7 @@ if [ "${RUN_MODEL}" == "remote" ]; then
   # Start gpfdist for each data path with different ports
   flag=10
   for GEN_DATA_PATH in "${GEN_PATHS[@]}"; do
-    GEN_DATA_PATH="${GEN_DATA_PATH}/${DB_SCHEMA_NAME}"
+    GEN_DATA_PATH="${GEN_DATA_PATH}/dsbenchmark"
     PORT=$((GPFDIST_PORT + flag))
     if [ "${LOG_DEBUG}" == "true" ]; then
       log_time "Starting gpfdist on port ${PORT} for path: ${GEN_DATA_PATH}"
@@ -247,7 +247,7 @@ for i in $(find "${PWD}" -maxdepth 1 -type f -name "*.${filter}.*.sql" -printf "
                 if [ "${LOG_DEBUG}" == "true" ]; then
                   log_time "Loading data from path: ${GEN_DATA_PATH}"
                 fi
-                for file in ${GEN_DATA_PATH}/${DB_SCHEMA_NAME}/[0-9]*/${table_name}_[0-9]*_[0-9]*.dat; do
+                for file in ${GEN_DATA_PATH}/dsbenchmark/[0-9]*/${table_name}_[0-9]*_[0-9]*.dat; do
                   if [ -e "$file" ]; then
                     if [ "${LOG_DEBUG}" == "true" ]; then
                       log_time "psql ${PSQL_OPTIONS} -v ON_ERROR_STOP=1 -c \"\COPY ${DB_SCHEMA_NAME}.${table_name} FROM '$file' WITH (FORMAT csv, DELIMITER '|', NULL '', ESCAPE E'\\\\\\\\', ENCODING 'LATIN1')\" | grep COPY | awk -F ' ' '{print \$2}'"
@@ -258,7 +258,7 @@ for i in $(find "${PWD}" -maxdepth 1 -type f -name "*.${filter}.*.sql" -printf "
                     )
                     tuples=$((tuples + result))
                   else
-                    log_time "No matching files found for pattern: ${GEN_DATA_PATH}/${DB_SCHEMA_NAME}/[0-9]*/${table_name}_[0-9]*_[0-9]*.dat"
+                    log_time "No matching files found for pattern: ${GEN_DATA_PATH}/dsbenchmark/[0-9]*/${table_name}_[0-9]*_[0-9]*.dat"
                   fi
                 done
             done
