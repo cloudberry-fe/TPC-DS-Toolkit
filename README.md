@@ -259,75 +259,50 @@ By default, this will run a scale 1 (1GB) benchmark with 1 concurrent user, from
 
 ## Configuration
 
-The benchmark is controlled through the `tpcds_variables.sh` file. Here are the key configuration sections:
+The benchmark is controlled through the `tpcds_variables.sh` file, which is organized into the following modules:
 
 ### Environment Options
+
+These options define the core environment settings for the benchmark:
+
 ```bash
 # Core settings
-export ADMIN_USER="gpadmin"
-export BENCH_ROLE="dsbench" 
-export DB_SCHEMA_NAME="tpcds"  # Database schema to use for all TPC-DS data tables  
-export RUN_MODEL="cloud"    # "local" or "cloud"
+export ADMIN_USER="gpadmin"        # OS user that executes this toolkit
+export BENCH_ROLE="dsbench"         # Database user for running the benchmark
+export DB_SCHEMA_NAME="tpcds"       # Database schema for TPC-DS tables
+export RUN_MODEL="local"            # "local" or "cloud" run mode
 
 # Remote cluster connection
-export PSQL_OPTIONS="-h <host> -p <port>"
-export CUSTOM_GEN_PATH="/tmp/dsbenchmark"  # Location for data generation, separated by space for multiple paths.
-export GEN_DATA_PARALLEL="2"             # Number of parallel data generation processes for each path.
-
+export PSQL_OPTIONS=""              # Database connection options (host, port, user)
 ```
 
 ### Benchmark Options
-```bash
-# Scale and concurrency 
-export GEN_DATA_SCALE="1"    # 1 = 1GB, 1000 = 1TB, 3000 = 3TB
-export MULTI_USER_COUNT="2"  # Number of concurrent users during throughput tests
 
-# For large scale tests, consider:
-# - 3TB: GEN_DATA_SCALE="3000" with MULTI_USER_COUNT="5"
-# - 10TB: GEN_DATA_SCALE="10000" with MULTI_USER_COUNT="7"
-# - 30TB: GEN_DATA_SCALE="30000" with MULTI_USER_COUNT="10"
+These options control the scale and concurrency of the benchmark:
+
+```bash
+export GEN_DATA_SCALE="1"           # Scale factor (1 = 1GB, 1000 = 1TB)
+export MULTI_USER_COUNT="2"         # Number of concurrent users for throughput tests
+
 ```
 
-### Storage Options  
+### Step Options
+
+These options control the execution of each benchmark step:
+
 ```bash
-# Table format and compression options
-# Uncomment and set to desired storage type. Default is commented out for compatibility.
-# export TABLE_ACCESS_METHOD="USING ao_column"  # Available options:
-#                                       # - heap: Classic row storage
-#                                       # - ao_row: Append-optimized row storage
-#                                       # - ao_column: Append-optimized columnar storage
-#                                       # - PAX: PAX storage format (Cloudberry 2.0 only)
-
-# Storage options for tables
-export TABLE_STORAGE_OPTIONS="WITH (appendoptimized=true, orientation=column, compresstype=zstd, compresslevel=5)"  # Full storage options
-
-# Table partitioning for 7 large fact tables:
-# catalog_returns, catalog_sales, inventory, store_returns, store_sales, web_returns, web_sales
-export TABLE_USE_PARTITION="true"
-```
-
-**Note**: 
-- `TABLE_ACCESS_METHOD`: Default is commented out for compatibility with all products. For Cloudberry Database and Greenplum 7.0+, set to `USING ao_column` for best performance. `USING PAX` is available exclusively for Cloudberry Database 2.0.
-- For earlier Greenplum versions without `TABLE_ACCESS_METHOD` support, use full storage options in `TABLE_STORAGE_OPTIONS`:
-  ```bash
-  export TABLE_STORAGE_OPTIONS="appendoptimized=true, orientation=column, compresstype=zlib, compresslevel=5, blocksize=1048576"
-  ```
-- Distribution policies are defined in `TPC-DS-Toolkit/03_ddl/distribution.txt`. For products supporting `REPLICATED` distribution, 14 dimension tables use `REPLICATED` distribution by default. For early Greenplum versions without `REPLICATED` support, see `TPC-DS-Toolkit/03_ddl/distribution_original.txt`.
-- Table partition definitions are in `TPC-DS-Toolkit/03_ddl/*.sql.partition`. When using partitioning with column-oriented tables, large block sizes may cause high memory consumption. Reduce block size or partition count if encountering out-of-memory errors.
-- In local mode, you can configure custom data generation paths using `USING_CUSTOM_GEN_PATH_IN_LOCAL_MODE` and `CUSTOM_GEN_PATH` variables.
-
-### Step Control Options
-```bash
-# Benchmark execution steps
-
 ## Step 00_compile_tpcds: Compile TPC-DS tools
 export RUN_COMPILE_TPCDS="true"  # Compile data/query generators (one-time setup)
 
 ## Step 01_gen_data: Generate test data
 export RUN_GEN_DATA="true"       # Generate test data
 export GEN_NEW_DATA="true"       # Generate new data vs reusing existing data
-export CUSTOM_GEN_PATH="/tmp/dsbenchmark"  # Location for data generation
-export GEN_DATA_PARALLEL="2"     # Number of parallel data generation processes
+### Default path to store the generated benchmark data, separated by space for multiple paths.
+export CUSTOM_GEN_PATH="/tmp/dsbenchmark"
+### How many parallel processes to run on each data path to generate data in all modes
+export GEN_DATA_PARALLEL="2"
+### The following variables only take effect when RUN_MODEL is set to "local".
+export USING_CUSTOM_GEN_PATH_IN_LOCAL_MODE="false"  # Use custom data generation path in local mode
 
 ## Step 02_init: Initialize cluster
 export RUN_INIT="true"           # Initialize cluster settings and GUCs
@@ -366,36 +341,11 @@ export RUN_MULTI_USER_REPORTS="false" # Generate multi-user test results
 export RUN_SCORE="false"              # Compute final benchmark score
 ```
 
-There are multiple steps in running the benchmark, controlled by these variables:
+### Misc Options
 
-| Variable                  | Default | Description |
-|---------------------------|---------|-------------|
-| `RUN_COMPILE_TPCDS`       | `true`  | Compiles `dsdgen` and `dsqgen` tools. Usually only needs to be done once. |
-| `RUN_GEN_DATA`            | `true`  | Generates flat files for the benchmark. In local mode, this runs in parallel on all segment nodes. |
-| `GEN_NEW_DATA`            | `true`  | Controls whether to generate new data or reuse existing data. Only effective when `RUN_GEN_DATA` is true. |
-| `RUN_INIT`                | `true`  | Sets up GUCs for the database and records segment configurations. Required after cluster reconfiguration. |
-| `RUN_DDL`                 | `true`  | Recreates schemas and tables (including external tables for loading). Set to `false` to keep existing data. |
-| `DROP_EXISTING_TABLES`    | `true`  | Controls whether to drop existing tables before creating new ones. Only effective when `RUN_DDL` is true. |
-| `RUN_LOAD`                | `true`  | Loads data from flat files into tables using either `gpfdist` (local mode) or `COPY` (cloud mode). |
-| `LOAD_PARALLEL`           | `2`     | Number of parallel processes to load data (maximum 24). |
-| `RUN_ANALYZE`             | `true`  | Computes table statistics for optimal query performance. |
-| `RUN_ANALYZE_PARALLEL`    | `5`     | Number of parallel processes for analyze operations (maximum 24). |
-| `RUN_SQL`                 | `true`  | Runs the power test (single-user) of the benchmark. |
-| `RUN_QGEN`                | `true`  | Generates the 99 TPC-DS benchmark queries using `dsqgen`. |
-| `UNIFY_QGEN_SEED`         | `true`  | Uses a unified seed (2016032410) for query generation to ensure reproducible results. |
-| `RUN_MULTI_USER`          | `false` | Runs the throughput test (multi-user) of the benchmark. |
-| `RUN_SCORE`               | `false` | Computes the final `QphDS` (Queries per Hour TPC-DS) score based on power and throughput metrics. |
-
-**Important Notes**:
-- The toolkit executes only the steps explicitly set to `true` in `tpcds_variables.sh`.
-- If any necessary step is set to `false` but has never been executed before, the script will abort when it tries to access missing data.
-- To run the benchmark with an existing dataset but a different database role, set `RUN_GEN_DATA=true`, `GEN_NEW_DATA=false`, and update the `BENCH_ROLE` variable.
-- For local mode, you can configure custom data generation paths using `USING_CUSTOM_GEN_PATH_IN_LOCAL_MODE` and `CUSTOM_GEN_PATH` variables.
-
-### Miscellaneous Options
+These options control various miscellaneous settings:
 
 ```bash
-# Misc options
 export LOG_DEBUG="false"                # Enable debug logging
 export SINGLE_USER_ITERATIONS="1"      # Number of times to run the power test
 export EXPLAIN_ANALYZE="false"         # Set to true for query plan analysis
@@ -410,6 +360,7 @@ export ADMIN_HOME=$(eval echo ${HOME}/${ADMIN_USER})
 export MASTER_HOST=$(hostname -s)
 export DB_SCHEMA_NAME="$(echo "${DB_SCHEMA_NAME}" | tr '[:upper:]' '[:lower:]')"
 export DB_EXT_SCHEMA_NAME="ext_${DB_SCHEMA_NAME}"
+export GEN_PATH_NAME="dsgendata_${DB_SCHEMA_NAME}"
 export BENCH_ROLE="$(echo "${BENCH_ROLE}" | tr '[:upper:]' '[:lower:]')"
 export DB_CURRENT_USER=$(psql ${PSQL_OPTIONS} -t -c "SELECT current_user;" 2>/dev/null | tr -d '[:space:]')
 ```
@@ -424,7 +375,32 @@ Key options explained:
 - `STATEMENT_MEM_MULTI_USER`: Sets memory per statement for multi-user tests. Note: `STATEMENT_MEM_MULTI_USER` × `MULTI_USER_COUNT` should be less than `gp_vmem_protect_limit`.
 - `ENABLE_VECTORIZATION`: Set to `on` to enable vectorized computing for better performance (supported in Cloudberry Database 2.0+ and HashData Lightning 1.5.3+). Only works with AO column and PAX table formats.
 - `GPFDIST_LOCATION`: Specifies where `gpfdist` will run: `p` for primary segment nodes or `m` for mirror segment nodes.
-- `DB_EXT_SCHEMA_NAME`: Automatically generated external schema name for staging tables, derived from `DB_SCHEMA_NAME`.
+
+### Storage Options
+
+These options control the storage settings for tables:
+
+```bash
+## Support TABLE_ACCESS_METHOD as ao_row / ao_column / heap in both GPDB 7 / CBDB
+## Support TABLE_ACCESS_METHOD as "PAX" for PAX table format for CBDB 2.0 only.
+export TABLE_ACCESS_METHOD="USING ao_column"  # Uncomment to enable
+
+## Set to use partition for the following tables:
+## catalog_returns / catalog_sales / inventory / store_returns / store_sales / web_returns / web_sales
+export TABLE_USE_PARTITION="true"
+
+## SET TABLE_STORAGE_OPTIONS with different options in GP/CBDB/Cloud
+export TABLE_STORAGE_OPTIONS="WITH (appendoptimized=true, orientation=column, compresstype=zstd, compresslevel=5)"
+```
+
+**Note**: 
+- `TABLE_ACCESS_METHOD`: Default is commented out for compatibility with all products. For Cloudberry Database and Greenplum 7.0+, set to `USING ao_column` for best performance. `USING PAX` is available exclusively for Cloudberry Database 2.0.
+- For earlier Greenplum versions without `TABLE_ACCESS_METHOD` support, use full storage options in `TABLE_STORAGE_OPTIONS`:
+  ```bash
+  export TABLE_STORAGE_OPTIONS="appendoptimized=true, orientation=column, compresstype=zlib, compresslevel=5, blocksize=1048576"
+  ```
+- Distribution policies are defined in `TPC-DS-Toolkit/03_ddl/distribution.txt`. For products supporting `REPLICATED` distribution, 14 dimension tables use `REPLICATED` distribution by default. For early Greenplum versions without `REPLICATED` support, see `TPC-DS-Toolkit/03_ddl/distribution_original.txt`.
+- Table partition definitions are in `TPC-DS-Toolkit/03_ddl/*.sql.partition`. When using partitioning with column-oriented tables, large block sizes may cause high memory consumption. Reduce block size or partition count if encountering out-of-memory errors.
 
 ## Performance Tuning
 
