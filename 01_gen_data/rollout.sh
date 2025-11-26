@@ -249,7 +249,7 @@ if [ "${GEN_NEW_DATA}" == "true" ]; then
       done
     done
     log_time "Now generating data...This may take a while."
-    count=$(ps -ef |grep -v grep |grep "generate_data.sh"|wc -l || true)
+    count=$(ps -ef |grep -v grep |grep "generate_data.sh"|grep -i "${GEN_PATH_NAME}"|wc -l || true)
     seconds=0
     echo -ne "Generating data duration: "
     while [ "$count" -gt "0" ]; do
