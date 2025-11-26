@@ -110,7 +110,7 @@ export ADMIN_HOME=$(eval echo ${HOME}/${ADMIN_USER})
 export MASTER_HOST=$(hostname -s)
 export DB_SCHEMA_NAME="$(echo "${DB_SCHEMA_NAME}" | tr '[:upper:]' '[:lower:]')"
 export DB_EXT_SCHEMA_NAME="ext_${DB_SCHEMA_NAME}"
-export GEN_PATH_NAME="gendata_${DB_SCHEMA_NAME}"
+export GEN_PATH_NAME="dsgendata_${DB_SCHEMA_NAME}"
 export BENCH_ROLE="$(echo "${BENCH_ROLE}" | tr '[:upper:]' '[:lower:]')"
 export DB_CURRENT_USER=$(psql ${PSQL_OPTIONS} -t -c "SELECT current_user;" 2>/dev/null | tr -d '[:space:]')
 
