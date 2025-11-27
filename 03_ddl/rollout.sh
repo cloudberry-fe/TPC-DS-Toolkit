@@ -70,6 +70,10 @@ if [ "${DROP_EXISTING_TABLES}" == "true" ]; then
     print_log
   done
 
+  if [ "${DB_VERSION}" == "postgresql" ]; then
+    filter="postgresql"
+  fi
+
   # Process partition files in numeric order
   if [ "${TABLE_USE_PARTITION}" == "true" ]; then
     for i in $(find "${PWD}" -maxdepth 1 -type f -name "*.${filter}.*.partition" -printf "%f\n" | sort -n); do
@@ -101,12 +105,6 @@ if [ "${DROP_EXISTING_TABLES}" == "true" ]; then
       if [ "${DB_VERSION}" == "hashdata_enterprise_4" ]; then
         DISTRIBUTED_BY=""
         TABLE_ACCESS_METHOD=""
-      fi
-
-      if [ "${DB_VERSION}" == "postgresql" ]; then
-        DISTRIBUTED_BY=""
-        TABLE_ACCESS_METHOD=""
-        TABLE_STORAGE_OPTIONS=""
       fi
 
       #Drop existing partition tables if they exist
