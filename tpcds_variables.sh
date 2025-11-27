@@ -11,24 +11,29 @@ export BENCH_ROLE="dsbench"
 export PSQL_OPTIONS=""
 
 # Benchmark options
+## Set to "local" to run the benchmark on the COORDINATOR host or "cloud" to run the benchmark from a remote client.
+export RUN_MODEL="local"
+## Set to true to enable more detailed logging for troubleshooting purposes.
+export LOG_DEBUG="false"
+## Scale factor for the TPC-DS dataset, default is 1.
 export GEN_DATA_SCALE="1"
+## Number of users to run the multi-user / throughput test, default is 2.
 export MULTI_USER_COUNT="2"
 ## DB_SCHEMA_NAME should be set to the database schema that will be used to store the TPC-DS tables
 export DB_SCHEMA_NAME="tpcds"
-## Set to "local" to run the benchmark on the COORDINATOR host or "cloud" to run the benchmark from a remote client.
-export RUN_MODEL="local"
+
 
 # Step options
 ## step 00_compile_tpcds
 export RUN_COMPILE_TPCDS="true"
 
 ## step 01_gen_data
+export RUN_GEN_DATA="true"
 # To run another TPC-DS with a different BENCH_ROLE using existing tables and data,
 # the queries need to be regenerated with the new role.
 # Change BENCH_ROLE and set RUN_GEN_DATA to true and GEN_NEW_DATA to false.
 # GEN_NEW_DATA only takes effect when RUN_GEN_DATA is true, and the default setting
 # should be true under normal circumstances.
-export RUN_GEN_DATA="true"
 export GEN_NEW_DATA="true"
 ### Default path to store the generated benchmark data, separated by space for multiple paths.
 export CUSTOM_GEN_PATH="/tmp/dsbenchmark"
@@ -44,12 +49,14 @@ export USING_CUSTOM_GEN_PATH_IN_LOCAL_MODE="false"
 export RUN_INIT="true"
 
 ## step 03_ddl
-# To run another TPC-DS with a different BENCH_ROLE using existing tables and data,
-# change BENCH_ROLE and set RUN_DDL to true and DROP_EXISTING_TABLES to false.
-# DROP_EXISTING_TABLES only takes effect when RUN_DDL is true, and the default setting
-# should be true under normal circumstances.
+## To run another TPC-DS with a different BENCH_ROLE using existing tables and data,
+## change BENCH_ROLE and set RUN_DDL to true and DROP_EXISTING_TABLES to false.
+## DROP_EXISTING_TABLES only takes effect when RUN_DDL is true, and the default setting
+## should be true under normal circumstances.
 export RUN_DDL="true"
 export DROP_EXISTING_TABLES="true"
+## Set to true to use random distribution for test tables.
+export RANDOM_DISTRIBUTION="false"
 
 ## step 04_load
 export RUN_LOAD="true"
@@ -65,21 +72,20 @@ export RUN_ANALYZE_PARALLEL="5"
 
 ## step 06_sql
 export RUN_SQL="true"
+### Set statement memory limit for each query execution, default is 1GB.
+export STATEMENT_MEM="1GB"
 ## Set to true to generate queries for the TPC-DS benchmark.
 export RUN_QGEN="true"
-## Set to true to generate queries for the TPC-DS benchmark with a specific seed "2016032410" to grantee the same query generated for all tests.
-## Set to false to generate queries with a seed when data loading finishes.
-export UNIFY_QGEN_SEED="true"
 ## Set wait time between each query execution, Set to 1 if you want to stop when an error occurs
 export QUERY_INTERVAL="0"
-#Set to 1 if you want to stop when error occurs
-export ON_ERROR_STOP="0"
 
 ## step 07_single_user_reports
 export RUN_SINGLE_USER_REPORTS="true"
 
 ## step 08_multi_user
 export RUN_MULTI_USER="false"
+### Set statement memory limit for each query execution in multi-user mode, default is 1GB.
+export STATEMENT_MEM_MULTI_USER="1GB"
 export RUN_MULTI_USER_QGEN="true"
 
 ## step 09_multi_user_reports
@@ -89,14 +95,16 @@ export RUN_MULTI_USER_REPORTS="false"
 export RUN_SCORE="false"
 
 # Misc options
-export LOG_DEBUG="false"
+## Set to 1 if you want the progress to stop when error occurs during single and multi user tests.
+export ON_ERROR_STOP="0"
+## Set to true to generate queries for the TPC-DS benchmark with a specific seed "2016032410" to grantee the same query generated for all tests.
+## Set to false to generate queries with a seed when data loading finishes.
+export UNIFY_QGEN_SEED="true"
 export SINGLE_USER_ITERATIONS="1"
+## Set to true to enable EXPLAIN ANALYZE for each query execution and log the result to the log folder.
 export EXPLAIN_ANALYZE="false"
-export RANDOM_DISTRIBUTION="false"
 ## Set to on/off to enable vectorization
 export ENABLE_VECTORIZATION="off"
-export STATEMENT_MEM="1GB"
-export STATEMENT_MEM_MULTI_USER="1GB"
 ## Set gpfdist location where gpfdist will run: p (primary) or m (mirror)
 export GPFDIST_LOCATION="p"
 export OSVERSION=$(uname)
