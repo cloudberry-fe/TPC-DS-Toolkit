@@ -13,7 +13,7 @@ TPC_DS_DIR=$(get_pwd ${BASH_SOURCE[0]})
 export TPC_DS_DIR
 
 log_time "TPC-DS test started"
-log_time "TPC-DS toolkit version is: V2.3"
+log_time "TPC-DS toolkit version is: V2.4"
 
 # Check that pertinent variables are set in the variable file.
 check_variables
@@ -38,6 +38,12 @@ fi
 if [ "${DB_VERSION}" == "postgresql" ]; then
   export RUN_MODEL="cloud"
 fi
+
+if [ "${DB_VERSION}" == "hashdata_enterprise_4" ]; then
+  export RUN_MODEL="cloud"
+fi
+
+log_time "Running TPC-DS in ${RUN_MODEL} mode for ${DB_VERSION}."
 
 if [ "${RUN_MODEL}" != "cloud" ]; then
   source_bashrc

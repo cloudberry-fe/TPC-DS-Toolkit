@@ -70,6 +70,10 @@ if [ "${DROP_EXISTING_TABLES}" == "true" ]; then
     print_log
   done
 
+  if [ "${DB_VERSION}" == "postgresql" ]; then
+    filter="postgresql"
+  fi
+
   # Process partition files in numeric order
   if [ "${TABLE_USE_PARTITION}" == "true" ]; then
     for i in $(find "${PWD}" -maxdepth 1 -type f -name "*.${filter}.*.partition" -printf "%f\n" | sort -n); do
@@ -82,26 +86,30 @@ if [ "${DROP_EXISTING_TABLES}" == "true" ]; then
       table_name=$(echo ${i} | awk -F '.' '{print $3}')
       export table_name
 
-    if [ "${RANDOM_DISTRIBUTION}" == "true" ]; then
-      DISTRIBUTED_BY="DISTRIBUTED RANDOMLY"
-    else
-      for z in $(cat ${PWD}/${distkeyfile}); do
-        table_name2=$(echo ${z} | awk -F '|' '{print $2}')
-        if [ "${table_name2}" == "${table_name}" ]; then
-          distribution=$(echo ${z} | awk -F '|' '{print $3}')
-        fi
-      done
-      
-      if [ "${distribution^^}" == "REPLICATED" ]; then
-        DISTRIBUTED_BY="DISTRIBUTED REPLICATED"
+      if [ "${RANDOM_DISTRIBUTION}" == "true" ]; then
+        DISTRIBUTED_BY="DISTRIBUTED RANDOMLY"
       else
-        DISTRIBUTED_BY="DISTRIBUTED BY (${distribution})"
+        for z in $(cat ${PWD}/${distkeyfile}); do
+          table_name2=$(echo ${z} | awk -F '|' '{print $2}')
+          if [ "${table_name2}" == "${table_name}" ]; then
+            distribution=$(echo ${z} | awk -F '|' '{print $3}')
+          fi
+        done
+        if [ "${distribution^^}" == "REPLICATED" ]; then
+          DISTRIBUTED_BY="DISTRIBUTED REPLICATED"
+        else
+          DISTRIBUTED_BY="DISTRIBUTED BY (${distribution})"
+        fi
       fi
-    fi
+
+      if [ "${DB_VERSION}" == "hashdata_enterprise_4" ]; then
+        DISTRIBUTED_BY=""
+        TABLE_ACCESS_METHOD=""
+      fi
 
       #Drop existing partition tables if they exist
       SQL_QUERY="drop table if exists ${DB_SCHEMA_NAME}.${table_name} cascade"
-      
+        
       if [ "${LOG_DEBUG}" == "true" ]; then
         psql ${PSQL_OPTIONS} -v ON_ERROR_STOP=1 -e -A -t -c "${SQL_QUERY}"
         log_time "psql ${PSQL_OPTIONS} -v ON_ERROR_STOP=1 -q -a -P pager=off -f ${PWD}/${i} -v DB_SCHEMA_NAME=\"${DB_SCHEMA_NAME}\" -v ACCESS_METHOD=\"${TABLE_ACCESS_METHOD}\" -v STORAGE_OPTIONS=\"${TABLE_STORAGE_OPTIONS}\" -v DISTRIBUTED_BY=\"${DISTRIBUTED_BY}\""
@@ -113,9 +121,9 @@ if [ "${DROP_EXISTING_TABLES}" == "true" ]; then
       fi
       print_log
     done
-    log_time "TPC-DS tables created in ${SECONDS} seconds."
   fi
-
+  log_time "TPC-DS tables created in ${SECONDS} seconds."
+  
   if [ "${RUN_MODEL}" != "cloud" ]; then
     log_time "Creating TPC-DS external tables for loading data in non-cloud model."
     SECONDS=0
